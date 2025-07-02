@@ -3,10 +3,20 @@ on:
   pull_request_target:
     types: [opened, reopened, synchronize]
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   appinspect:
     runs-on: ubuntu-latest
     steps:
+      - name: Setup InvisiRisk - Build Application Firewall
+        uses: invisirisk/pse-action@latest
+        with:
+          api_url: "https://app.invisirisk.com"
+          app_token: ${{ secrets.IR_API_KEY }}
+
       - name: Check out the repository code
         uses: actions/checkout@v4
         with:
@@ -43,3 +53,22 @@ jobs:
           path: |
             artifacts/DA-ESS-ContentUpdate-latest.tar.gz
             artifacts/app_inspect_report
+
+      - name: Cleanup Build Application Firewall
+        if: always()
+        uses: invisirisk/pse-action@latest
+        with:
+          cleanup: "true"
+
+  gather_analytics:
+    runs-on: ubuntu-latest
+    name: Gather Analytics
+    needs: [appinspect]
+    if: always()
+    steps:
+      - name: Gather Status
+        uses: invisirisk/pse-action@latest
+        with:
+          api_url: "https://app.invisirisk.com"
+          app_token: ${{ secrets.IR_API_KEY }}
+          send_job_status: "true"
